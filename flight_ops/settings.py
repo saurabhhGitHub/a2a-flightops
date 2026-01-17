@@ -4,10 +4,16 @@ Django settings for flight_ops project.
 
 from pathlib import Path
 import os
-import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
+
+# Import dj_database_url (required)
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,7 +28,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-demo-key-change-in-product
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,a2a-flightops.herokuapp.com').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,a2a-flightops.herokuapp.com,testserver').split(',')
 
 
 # Application definition
@@ -73,9 +79,11 @@ WSGI_APPLICATION = 'flight_ops.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Use DATABASE_URL from Heroku if available, otherwise use local settings
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
+# Use DATABASE_URL connection string (works for both local and Heroku)
+# If not set, use a default local PostgreSQL connection
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/flight_ops')
+
+if dj_database_url:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -84,16 +92,9 @@ if DATABASE_URL:
         )
     }
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'flight_ops'),
-            'USER': os.getenv('DB_USER', 'postgres'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432'),
-        }
-    }
+    raise ImproperlyConfigured(
+        "dj-database-url package is required. Install it with: pip install dj-database-url"
+    )
 
 
 # Password validation
