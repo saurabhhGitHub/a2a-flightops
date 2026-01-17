@@ -28,7 +28,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-demo-key-change-in-product
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,a2a-flightops.herokuapp.com,testserver').split(',')
+# ALLOWED_HOSTS configuration
+# On Heroku, allow all hosts (DYNO env var indicates Heroku)
+if os.getenv('DYNO'):
+    # Running on Heroku - allow all hosts
+    ALLOWED_HOSTS = ['*']
+else:
+    # Local development
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 
 
 # Application definition
