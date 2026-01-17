@@ -304,3 +304,4 @@ curl -X POST http://localhost:8000/api/agent/ops/ \
 - **Gemini API**: Optional - graceful fallback if API key not set
 - **Error Handling**: All errors are handled gracefully without affecting responses
 # Agent2Agent_FlightOps
+# a2a-flightops
