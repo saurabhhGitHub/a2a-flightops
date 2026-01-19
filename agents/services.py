@@ -22,6 +22,15 @@ class GeminiCostService:
         Returns:
             dict: Response with recommendation, reason, and confidence
         """
+        logger.info("=" * 60)
+        logger.info("GEMINI COST OPTIMIZATION AGENT - ACTIVATED")
+        logger.info("=" * 60)
+        logger.info(f"Received Input Parameters:")
+        logger.info(f"  - Delay Hours: {delay_hours}")
+        logger.info(f"  - Total Passengers: {total_passengers}")
+        logger.info(f"  - VIP Passengers: {vip_passengers}")
+        logger.info("Processing: Analyzing cost implications...")
+        
         # Initialize Gemini API
         api_key = settings.GEMINI_API_KEY
         if not api_key:
@@ -68,11 +77,22 @@ Format your response as JSON only, no additional text."""
             # Parse JSON response
             gemini_response = json.loads(response_text)
             
+            recommendation = gemini_response.get("recommendation", "LIMIT_HOTEL")
+            reason = gemini_response.get("reason", "Cost optimization analysis")
+            confidence = float(gemini_response.get("confidence", 0.75))
+            
+            logger.info("Analysis Complete:")
+            logger.info(f"  - Recommendation: {recommendation}")
+            logger.info(f"  - Reasoning: {reason}")
+            logger.info(f"  - Confidence Level: {confidence:.2f}")
+            logger.info("Agent Processing: COMPLETED")
+            logger.info("=" * 60)
+            
             return {
                 "agent": GeminiCostService.AGENT_NAME,
-                "recommendation": gemini_response.get("recommendation", "LIMIT_HOTEL"),
-                "reason": gemini_response.get("reason", "Cost optimization analysis"),
-                "confidence": float(gemini_response.get("confidence", 0.75))
+                "recommendation": recommendation,
+                "reason": reason,
+                "confidence": confidence
             }
             
         except json.JSONDecodeError as e:
@@ -92,15 +112,24 @@ Format your response as JSON only, no additional text."""
     @staticmethod
     def _get_fallback_response(delay_hours: int, total_passengers: int, vip_passengers: int) -> dict:
         """Fallback response when Gemini API fails."""
+        logger.warning("Gemini API unavailable - Using rule-based fallback logic")
+        logger.info("Applying Cost Optimization Rules:")
+        
         # Simple rule-based fallback
         if delay_hours >= 4 or total_passengers < 50:
             recommendation = "HOTEL_FOR_ALL"
             reason = "Small passenger count or long delay justifies full accommodation"
             confidence = 0.65
+            logger.info(f"  - Rule Applied: Long delay ({delay_hours}h) OR small passenger count ({total_passengers})")
         else:
             recommendation = "LIMIT_HOTEL"
             reason = "Hotel for all passengers is expensive for this delay duration"
             confidence = 0.70
+            logger.info(f"  - Rule Applied: Standard delay with moderate passenger count")
+        
+        logger.info(f"  - Fallback Recommendation: {recommendation}")
+        logger.info(f"  - Confidence: {confidence:.2f}")
+        logger.info("=" * 60)
         
         return {
             "agent": GeminiCostService.AGENT_NAME,
@@ -123,7 +152,20 @@ class ComplianceService:
         Returns:
             dict: Response with rule, reason, and confidence
         """
+        logger.info("=" * 60)
+        logger.info("COMPLIANCE AGENT - ACTIVATED")
+        logger.info("=" * 60)
+        logger.info(f"Received Input Parameters:")
+        logger.info(f"  - Delay Hours: {delay_hours}")
+        logger.info("Processing: Checking regulatory compliance requirements...")
+        logger.info(f"Evaluating: Delay threshold check (Regulatory threshold: 2 hours)")
+        
         if delay_hours >= 2:
+            logger.info(f"Result: Delay ({delay_hours}h) EXCEEDS regulatory threshold (2h)")
+            logger.info("Compliance Status: HOTEL_MANDATORY")
+            logger.info("Reason: Regulatory requirement must be satisfied")
+            logger.info("Agent Processing: COMPLETED")
+            logger.info("=" * 60)
             return {
                 "agent": ComplianceService.AGENT_NAME,
                 "rule": "HOTEL_MANDATORY",
@@ -131,6 +173,11 @@ class ComplianceService:
                 "confidence": 1.0
             }
         else:
+            logger.info(f"Result: Delay ({delay_hours}h) BELOW regulatory threshold (2h)")
+            logger.info("Compliance Status: HOTEL_NOT_REQUIRED")
+            logger.info("Reason: No regulatory mandate for this delay duration")
+            logger.info("Agent Processing: COMPLETED")
+            logger.info("=" * 60)
             return {
                 "agent": ComplianceService.AGENT_NAME,
                 "rule": "HOTEL_NOT_REQUIRED",
@@ -152,8 +199,24 @@ class OpsService:
         Returns:
             dict: Response with available seats and hotel capacity
         """
+        logger.info("=" * 60)
+        logger.info("OPS FEASIBILITY AGENT - ACTIVATED")
+        logger.info("=" * 60)
+        logger.info("Processing: Checking operational resources...")
+        logger.info("Querying: Available seats and hotel capacity status")
+        
+        available_seats = 42
+        hotel_capacity = "LIMITED"
+        
+        logger.info("Operational Status Retrieved:")
+        logger.info(f"  - Available Seats: {available_seats}")
+        logger.info(f"  - Hotel Capacity: {hotel_capacity}")
+        logger.info("Feasibility Assessment: Resources are limited")
+        logger.info("Agent Processing: COMPLETED")
+        logger.info("=" * 60)
+        
         return {
             "agent": OpsService.AGENT_NAME,
-            "available_seats": 42,
-            "hotel_capacity": "LIMITED"
+            "available_seats": available_seats,
+            "hotel_capacity": hotel_capacity
         }

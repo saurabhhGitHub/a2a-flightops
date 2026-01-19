@@ -38,9 +38,15 @@ def gemini_cost_agent(request):
     
     POST /api/agent/gemini-cost/
     """
+    logger.info("")
+    logger.info(">>> INCOMING REQUEST: Gemini Cost Optimization Agent")
+    logger.info(f"Request Source: {request.META.get('REMOTE_ADDR', 'Unknown')}")
+    logger.info(f"Request Timestamp: {request.META.get('HTTP_DATE', 'N/A')}")
+    
     serializer = GeminiCostRequestSerializer(data=request.data)
     
     if not serializer.is_valid():
+        logger.error(f"Validation Failed: {serializer.errors}")
         return Response(
             {"error": "Invalid request", "details": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
@@ -51,6 +57,9 @@ def gemini_cost_agent(request):
     total_passengers = validated_data['total_passengers']
     vip_passengers = validated_data['vip_passengers']
     
+    logger.info("Request Validated Successfully")
+    logger.info("Initiating Agent Processing...")
+    
     # Get recommendation from service
     response_data = GeminiCostService.get_recommendation(
         delay_hours=delay_hours,
@@ -58,12 +67,17 @@ def gemini_cost_agent(request):
         vip_passengers=vip_passengers
     )
     
+    logger.info("Preparing Response Payload...")
+    
     # Log the call
     _log_agent_call(
         agent_name=GeminiCostService.AGENT_NAME,
         request_data=request.data,
         response_data=response_data
     )
+    
+    logger.info("Response Ready - Returning to caller")
+    logger.info("")
     
     return Response(response_data, status=status.HTTP_200_OK)
 
@@ -75,9 +89,14 @@ def compliance_agent(request):
     
     POST /api/agent/compliance/
     """
+    logger.info("")
+    logger.info(">>> INCOMING REQUEST: Compliance Agent")
+    logger.info(f"Request Source: {request.META.get('REMOTE_ADDR', 'Unknown')}")
+    
     serializer = ComplianceRequestSerializer(data=request.data)
     
     if not serializer.is_valid():
+        logger.error(f"Validation Failed: {serializer.errors}")
         return Response(
             {"error": "Invalid request", "details": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
@@ -85,8 +104,14 @@ def compliance_agent(request):
     
     delay_hours = serializer.validated_data['delay_hours']
     
+    logger.info("Request Validated Successfully")
+    logger.info("Initiating Compliance Rule Evaluation...")
+    
     # Get rule from service
     response_data = ComplianceService.get_rule(delay_hours=delay_hours)
+    
+    logger.info("Compliance Assessment Complete")
+    logger.info("Preparing Response Payload...")
     
     # Log the call
     _log_agent_call(
@@ -94,6 +119,9 @@ def compliance_agent(request):
         request_data=request.data,
         response_data=response_data
     )
+    
+    logger.info("Response Ready - Returning to caller")
+    logger.info("")
     
     return Response(response_data, status=status.HTTP_200_OK)
 
@@ -105,17 +133,28 @@ def ops_agent(request):
     
     POST /api/agent/ops/
     """
+    logger.info("")
+    logger.info(">>> INCOMING REQUEST: Ops Feasibility Agent")
+    logger.info(f"Request Source: {request.META.get('REMOTE_ADDR', 'Unknown')}")
+    
     # Request body is optional for this endpoint
     serializer = OpsRequestSerializer(data=request.data or {})
     
     if not serializer.is_valid():
+        logger.error(f"Validation Failed: {serializer.errors}")
         return Response(
             {"error": "Invalid request", "details": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
     
+    logger.info("Request Validated Successfully")
+    logger.info("Initiating Operational Feasibility Check...")
+    
     # Get feasibility from service
     response_data = OpsService.get_feasibility()
+    
+    logger.info("Feasibility Assessment Complete")
+    logger.info("Preparing Response Payload...")
     
     # Log the call
     _log_agent_call(
@@ -123,5 +162,8 @@ def ops_agent(request):
         request_data=request.data or {},
         response_data=response_data
     )
+    
+    logger.info("Response Ready - Returning to caller")
+    logger.info("")
     
     return Response(response_data, status=status.HTTP_200_OK)
