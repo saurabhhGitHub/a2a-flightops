@@ -41,7 +41,7 @@ def gemini_cost_agent(request):
     logger.info("")
     logger.info(">>> INCOMING REQUEST: Gemini Cost Optimization Agent")
     logger.info(f"Request Source: {request.META.get('REMOTE_ADDR', 'Unknown')}")
-    logger.info(f"Request Timestamp: {request.META.get('HTTP_DATE', 'N/A')}")
+    # logger.info(f"Request Timestamp: {request.META.get('HTTP_DATE', 'N/A')}")
     
     serializer = GeminiCostRequestSerializer(data=request.data)
     
