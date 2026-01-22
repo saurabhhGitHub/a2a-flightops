@@ -163,6 +163,9 @@ REST_FRAMEWORK = {
 # Gemini API Configuration
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
+# Weather API Configuration (for MCP weather context)
+WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', '')
+
 # Logging Configuration for Demo Visibility
 LOGGING = {
     'version': 1,
@@ -181,6 +184,11 @@ LOGGING = {
     },
     'loggers': {
         'agents': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'mcp': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,

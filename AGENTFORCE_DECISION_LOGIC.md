@@ -14,16 +14,18 @@ This document explains how Salesforce Agentforce evaluates all agent opinions an
 ┌─────────────────────────────────────────────────────────┐
 │  STEP 1: Collect All Agent Opinions                    │
 ├─────────────────────────────────────────────────────────┤
-│  Call all three APIs in parallel:                       │
+│  Call APIs in parallel:                                 │
 │  1. Gemini Cost Agent → Cost opinion                    │
 │  2. Compliance Agent → Regulatory opinion               │
 │  3. Ops Agent → Feasibility opinion                    │
+│  4. Weather Agent (OPTIONAL) → External context        │
 └─────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────┐
 │  STEP 2: Evaluate Opinions (Decision Tree)             │
 ├─────────────────────────────────────────────────────────┤
 │  Apply decision logic based on priority                 │
+│  (Weather is optional - flow works without it)         │
 └─────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────┐
@@ -33,6 +35,8 @@ This document explains how Salesforce Agentforce evaluates all agent opinions an
 └─────────────────────────────────────────────────────────┘
 ```
 
+**Note**: Weather context is **optional**. The flow works perfectly with only Cost, Compliance, and Ops agents. Weather provides additional external situation awareness for more informed decisions.
+
 ---
 
 ## Decision Formula / Logic
@@ -40,8 +44,11 @@ This document explains how Salesforce Agentforce evaluates all agent opinions an
 ### Priority Order (Most Important First)
 
 1. **Compliance Agent** (Highest Priority - Regulatory)
-2. **Ops Agent** (Feasibility Constraints)
-3. **Gemini Cost Agent** (Cost Optimization)
+2. **Weather Agent** (OPTIONAL - External Situation Awareness)
+3. **Ops Agent** (Feasibility Constraints)
+4. **Gemini Cost Agent** (Cost Optimization)
+
+**Note**: Weather is optional. If weather context is unavailable, skip Priority 2 and continue with Priority 3 (Ops).
 
 ### Decision Tree
 
@@ -50,8 +57,14 @@ IF Compliance_Rule = "HOTEL_MANDATORY"
    THEN Final_Decision = "PROVIDE_HOTEL_TO_ALL"
    REASON: Regulatory requirement overrides all other considerations
    
+ELSE IF Weather_Severity = "HIGH" 
+        AND Weather_Cascading_Risk = "HIGH"
+        AND Weather_Available = TRUE
+   THEN Final_Decision = "PROVIDE_HOTEL_TO_ALL"
+   REASON: Severe weather with high cascading risk (external context)
+   
 ELSE IF Compliance_Rule = "HOTEL_NOT_REQUIRED"
-   THEN Evaluate Cost + Ops:
+   THEN Evaluate Cost + Ops + Weather (if available):
    
    IF Hotel_Capacity = "LIMITED" AND Available_Seats < Total_Passengers
       THEN Final_Decision = "PROVIDE_HOTEL_TO_VIP_ONLY"
@@ -60,8 +73,15 @@ ELSE IF Compliance_Rule = "HOTEL_NOT_REQUIRED"
    ELSE IF Cost_Recommendation = "HOTEL_FOR_ALL" 
            AND Cost_Confidence >= 0.8
            AND Hotel_Capacity = "AVAILABLE"
+           AND (Weather_Not_Available OR Weather_Severity != "HIGH")
       THEN Final_Decision = "PROVIDE_HOTEL_TO_ALL"
       REASON: High confidence cost recommendation + capacity available
+      
+   ELSE IF Weather_Severity = "MEDIUM"
+           AND Weather_Cascading_Risk = "MEDIUM"
+           AND Weather_Available = TRUE
+      THEN Final_Decision = "PROVIDE_HOTEL_TO_VIP_ONLY"
+      REASON: Moderate weather risk, prioritize VIP passengers
       
    ELSE IF Cost_Recommendation = "LIMIT_HOTEL"
            AND VIP_Passengers > 0
@@ -72,6 +92,11 @@ ELSE IF Compliance_Rule = "HOTEL_NOT_REQUIRED"
       THEN Final_Decision = "NO_HOTEL_PROVIDED"
       REASON: No regulatory requirement, cost optimization suggests no hotel
 ```
+
+**Important**: 
+- Weather checks are **optional**. If `Weather_Available = FALSE`, skip weather conditions and continue with original logic.
+- Flow works perfectly without weather context.
+- Weather enhances decisions but is not required for correct answers.
 
 ---
 
@@ -200,24 +225,66 @@ Decision Thresholds:
 - Delay: 1.5 hours
 - Total Passengers: 200
 - VIP Passengers: 20
+- Airport: DEL
 
 **API Responses:**
 - Compliance: `HOTEL_NOT_REQUIRED`
 - Cost: `LIMIT_HOTEL` (confidence: 0.88)
 - Ops: `available_seats: 30`, `hotel_capacity: "LIMITED"`
+- Weather: Not available (optional)
 
 **Decision:** `PROVIDE_HOTEL_TO_VIP_ONLY`
 **Reason:** Cost optimization + limited capacity + VIP passengers present
 
 ---
 
+### Example 4: Short Delay + Severe Weather (With Weather Context)
+**Input:**
+- Delay: 1.5 hours
+- Total Passengers: 180
+- VIP Passengers: 18
+- Airport: DEL
+
+**API Responses:**
+- Compliance: `HOTEL_NOT_REQUIRED` (delay < 2 hours)
+- Cost: `LIMIT_HOTEL` (confidence: 0.85)
+- Ops: `available_seats: 42`, `hotel_capacity: "LIMITED"`
+- Weather: `severity: "HIGH"`, `cascading_risk: "HIGH"`, `expected_duration: 4.0h`
+
+**Decision:** `PROVIDE_HOTEL_TO_ALL`
+**Reason:** Severe weather with high cascading risk overrides cost optimization
+
+**Note**: Without weather context, this would have been `PROVIDE_HOTEL_TO_VIP_ONLY`. Weather provides additional external awareness.
+
+---
+
+### Example 5: Moderate Weather (With Weather Context)
+**Input:**
+- Delay: 1 hour
+- Total Passengers: 150
+- VIP Passengers: 15
+- Airport: BOM
+
+**API Responses:**
+- Compliance: `HOTEL_NOT_REQUIRED`
+- Cost: `LIMIT_HOTEL` (confidence: 0.75)
+- Ops: `available_seats: 50`, `hotel_capacity: "AVAILABLE"`
+- Weather: `severity: "MEDIUM"`, `cascading_risk: "MEDIUM"`
+
+**Decision:** `PROVIDE_HOTEL_TO_VIP_ONLY`
+**Reason:** Moderate weather risk, prioritize VIP passengers despite available capacity
+
+---
+
 ## Key Decision Principles
 
-1. **Compliance First**: Regulatory requirements always override cost/ops
-2. **Feasibility Check**: Can't provide what's not available
-3. **Cost Optimization**: Considered when compliance allows flexibility
-4. **VIP Service Standards**: VIP passengers get priority when resources are limited
-5. **Confidence Matters**: Higher confidence opinions carry more weight
+1. **Compliance First**: Regulatory requirements always override cost/ops/weather
+2. **Weather Context** (Optional): External situation awareness informs decisions when available
+3. **Feasibility Check**: Can't provide what's not available
+4. **Cost Optimization**: Considered when compliance allows flexibility
+5. **VIP Service Standards**: VIP passengers get priority when resources are limited
+6. **Confidence Matters**: Higher confidence opinions carry more weight
+7. **Graceful Degradation**: Flow works correctly even if weather context is unavailable
 
 ---
 
@@ -269,9 +336,71 @@ Agentforce should re-evaluate if:
 
 ---
 
+## Weather Context Integration (Optional Enhancement)
+
+### Weather Agent Details
+
+**Endpoint**: `POST /mcp/tools/invoke`
+
+**Request**:
+```json
+{
+  "tool": "weather_disruption_context",
+  "arguments": {
+    "airport_code": "DEL"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "tool": "weather_disruption_context",
+  "result": {
+    "severity": "MEDIUM",
+    "expected_duration_hours": 2.0,
+    "cascading_delay_risk": "MEDIUM",
+    "source": "v1"
+  }
+}
+```
+
+### Weather Integration Notes
+
+1. **Optional**: Weather context is optional. Flow works perfectly without it.
+2. **Graceful Degradation**: If weather call fails or is skipped, continue with original logic (Compliance + Cost + Ops).
+3. **Enhancement, Not Requirement**: Weather provides external situation awareness but is not required for correct decisions.
+4. **Source Field**: 
+   - `"source": "v1"` = weather data from API
+   - `"source": "v2"` = Fallback logic (API unavailable)
+   - Both are valid - treat them the same way
+
+### When to Use Weather
+
+- **Recommended**: Production environments, when airport code is available
+- **Optional**: Development/testing, when weather API is down, when you want faster decisions
+
+### Implementation Pattern
+
+```apex
+// Try to get weather context (optional)
+WeatherContextResponse weather = null;
+try {
+    weather = DjangoAgentService.callWeatherContext(airportCode);
+} catch (Exception e) {
+    // Weather unavailable - continue without it
+    System.debug('Weather context unavailable: ' + e.getMessage());
+}
+
+// Use weather if available, otherwise use original logic
+String decision = makeDecision(compliance, cost, ops, weather);
+```
+
+---
+
 ## Summary
 
-**Decision Formula:**
+**Decision Formula (Without Weather)**:
 ```
 IF Compliance = MANDATORY → PROVIDE_HOTEL_TO_ALL
 ELSE IF Capacity Limited → PROVIDE_HOTEL_TO_VIP_ONLY
@@ -280,4 +409,18 @@ ELSE IF Cost Limit + VIP Present → PROVIDE_HOTEL_TO_VIP_ONLY
 ELSE → NO_HOTEL_PROVIDED
 ```
 
-**Key Point**: Agentforce makes the decision. Django agents only provide opinions. The decision logic lives in Salesforce, not in Django.
+**Decision Formula (With Weather - Enhanced)**:
+```
+IF Compliance = MANDATORY → PROVIDE_HOTEL_TO_ALL
+ELSE IF Weather = HIGH + Cascading Risk HIGH → PROVIDE_HOTEL_TO_ALL
+ELSE IF Capacity Limited → PROVIDE_HOTEL_TO_VIP_ONLY
+ELSE IF Cost High Confidence + Capacity Available + Weather != HIGH → PROVIDE_HOTEL_TO_ALL
+ELSE IF Weather = MEDIUM → PROVIDE_HOTEL_TO_VIP_ONLY
+ELSE IF Cost Limit + VIP Present → PROVIDE_HOTEL_TO_VIP_ONLY
+ELSE → NO_HOTEL_PROVIDED
+```
+
+**Key Points**: 
+- Agentforce makes the decision. Django agents only provide opinions. The decision logic lives in Salesforce, not in Django.
+- Weather context is **optional**. Flow works correctly with or without it.
+- Weather enhances decision quality but is not required for correct answers.
