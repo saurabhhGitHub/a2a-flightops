@@ -102,15 +102,17 @@ def compliance_agent(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    delay_hours = serializer.validated_data['delay_hours']
+    validated_data = serializer.validated_data
+    delay_hours = validated_data['delay_hours']
     
     logger.info("Request Validated Successfully")
-    logger.info("Initiating Compliance Rule Evaluation...")
+    logger.info("Initiating Agent Processing...")
+    logger.info("Connecting to Gemini API for regulatory compliance analysis...")
     
     # Get rule from service
     response_data = ComplianceService.get_rule(delay_hours=delay_hours)
     
-    logger.info("Compliance Assessment Complete")
+    logger.info("AI Analysis Complete - Processing Results...")
     logger.info("Preparing Response Payload...")
     
     # Log the call
@@ -148,12 +150,13 @@ def ops_agent(request):
         )
     
     logger.info("Request Validated Successfully")
-    logger.info("Initiating Operational Feasibility Check...")
+    logger.info("Initiating Agent Processing...")
+    logger.info("Connecting to Gemini API for operational feasibility analysis...")
     
     # Get feasibility from service
     response_data = OpsService.get_feasibility()
     
-    logger.info("Feasibility Assessment Complete")
+    logger.info("AI Analysis Complete - Processing Results...")
     logger.info("Preparing Response Payload...")
     
     # Log the call
